@@ -1,0 +1,97 @@
+type Order = record {
+  id : text;
+  weight : float64;
+  status : text;
+  sender_location : _InlineOrderSenderLocation;
+  updated_at : opt nat64;
+  initial_amount : float64;
+  description : text;
+  created_at : nat64;
+  sender : text;
+  receiver_location : _InlineOrderSenderLocation;
+  receiver : text;
+};
+type OrderPayload = record {
+  weight : float64;
+  status : text;
+  description : text;
+  sender : text;
+  receiver : text;
+};
+type Payment = record {
+  id : text;
+  status : text;
+  updated_at : opt nat64;
+  created_at : nat64;
+  order_id : text;
+  amount : float64;
+};
+type PaymentPayload = record {
+  status : text;
+  order_id : text;
+  amount : float64;
+};
+type Shipment = record {
+  id : text;
+  updated_at : opt nat64;
+  created_at : nat64;
+  last_location : text;
+  driver_id : text;
+  order_id : text;
+};
+type ShipmentPayload = record {
+  last_location : text;
+  driver_id : text;
+  order_id : text;
+};
+type User = record {
+  id : text;
+  updated_at : opt nat64;
+  username : text;
+  "type" : text;
+  created_at : nat64;
+};
+type UserLocation = record {
+  id : text;
+  updated_at : opt nat64;
+  created_at : nat64;
+  user_id : text;
+  location : _InlineOrderSenderLocation;
+};
+type UserLocationPayload = record {
+  user_id : text;
+  location : _InlineOrderSenderLocation;
+};
+type UserPayload = record { username : text; "type" : text };
+type _AzleResult = variant { Ok : Order; Err : text };
+type _AzleResult_1 = variant { Ok : Payment; Err : text };
+type _AzleResult_2 = variant { Ok : Shipment; Err : text };
+type _AzleResult_3 = variant { Ok : User; Err : text };
+type _AzleResult_4 = variant { Ok : UserLocation; Err : text };
+type _AzleResult_5 = variant { Ok : vec Order; Err : text };
+type _AzleResult_6 = variant { Ok : vec Payment; Err : text };
+type _AzleResult_7 = variant { Ok : vec Shipment; Err : text };
+type _AzleResult_8 = variant { Ok : vec User; Err : text };
+type _InlineOrderSenderLocation = record { lat : float64; lng : float64 };
+service : () -> {
+  createOrder : (OrderPayload) -> (_AzleResult);
+  createPayment : (PaymentPayload) -> (_AzleResult_1);
+  createShipment : (ShipmentPayload) -> (_AzleResult_2);
+  createUser : (UserPayload) -> (_AzleResult_3);
+  createUserLocation : (UserLocationPayload) -> (_AzleResult_4);
+  deleteOrder : (text) -> (_AzleResult);
+  deleteUser : (text) -> (_AzleResult_3);
+  getOrder : (text) -> (_AzleResult) query;
+  getOrders : () -> (_AzleResult_5) query;
+  getPayment : (text) -> (_AzleResult_1) query;
+  getPayments : () -> (_AzleResult_6) query;
+  getShipment : (text) -> (_AzleResult_2) query;
+  getShipments : () -> (_AzleResult_7) query;
+  getUser : (text) -> (_AzleResult_3) query;
+  getUserLocation : (text) -> (_AzleResult_4) query;
+  getUsers : () -> (_AzleResult_8) query;
+  updateOrder : (text, OrderPayload) -> (_AzleResult);
+  updateShipment : (text, ShipmentPayload) -> (_AzleResult_2);
+  updateUser : (text, UserPayload) -> (_AzleResult_3);
+  updateUserLocation : (text, UserLocationPayload) -> (_AzleResult_4);
+}
