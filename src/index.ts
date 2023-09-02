@@ -121,7 +121,9 @@ export function getUsers(): Result<Vec<User>, string> {
  */
 $query;
 export function getUser(id: string): Result<User, string> {
-    if (!id) return Result.Err<User, string>(`Invalid id`);
+    if (!id || typeof id !== 'string') {
+        return Result.Err<User, string>(`Invalid id: ${id}`);
+    }
     return match(userStorage.get(id), {
         Some: (user) => Result.Ok<User, string>(user),
         None: () => Result.Err<User, string>(`User of id:${id} not found`),
@@ -136,6 +138,9 @@ export function getUser(id: string): Result<User, string> {
  */
 $update;
 export function createUser(payload: UserPayload): Result<User, string> {
+    if (!payload || !payload.username || !payload.type) {
+        return Result.Err<User, string>('Invalid payload: username and type are required');
+    }
     const user: User = {
         id: uuidv4(),
         created_at: ic.time(),
@@ -155,7 +160,13 @@ export function createUser(payload: UserPayload): Result<User, string> {
  */
 $update;
 export function updateUser(id: string, payload: UserPayload): Result<User, string> {
-    if (!id) return Result.Err<User, string>(`Invalid id`);
+    if (!id || typeof id !== 'string') {
+        return Result.Err<User, string>(`Invalid id: ${id}`);
+    }
+
+    if (!payload || (!payload.username && !payload.type)) {
+        return Result.Err<User, string>('Invalid payload: At least username or type is required for updating');
+    }
     return match(userStorage.get(id), {
         Some: (user) => {
             const updatedUser = {
@@ -178,7 +189,9 @@ export function updateUser(id: string, payload: UserPayload): Result<User, strin
  */
 $update;
 export function deleteUser(id: string): Result<User, string> {
-    if (!id) return Result.Err<User, string>(`Invalid id`);
+    if (!id || typeof id !== 'string') {
+        return Result.Err<User, string>(`Invalid id: ${id}`);
+    }
     return match(userStorage.remove(id), {
         Some: (user) => Result.Ok<User, string>(user),
         None: () => Result.Err<User, string>(`User of id:${id} not found`),
@@ -211,6 +224,9 @@ export function getUserLocation(userid: string): Result<UserLocation, string> {
  */
 $update;
 export function createUserLocation(payload: UserLocationPayload): Result<UserLocation, string> {
+    if (!payload || !payload.user_id || !payload.location) {
+        return Result.Err<UserLocation, string>('Invalid payload: user_id and location are required');
+    }
     const userLocation: UserLocation = {
         id: uuidv4(),
         user_id: payload.user_id,
@@ -231,7 +247,13 @@ export function createUserLocation(payload: UserLocationPayload): Result<UserLoc
  */
 $update;
 export function updateUserLocation(userid: string, payload: UserLocationPayload): Result<UserLocation, string> {
-    if (!userid) return Result.Err<UserLocation, string>(`Invalid user id`);
+    if (!userid || typeof userid !== 'string') {
+        return Result.Err<UserLocation, string>(`Invalid user id: ${userid}`);
+    }
+
+    if (!payload || !payload.location) {
+        return Result.Err<UserLocation, string>('Invalid payload: location is required for updating');
+    }
     return match(userLocationStorage.get(userid), {
         Some: (userLocation) => {
             const updatedUserLocation = {
@@ -273,6 +295,25 @@ export function getOrder(id: string): Result<Order, string> {
     });
 }
 
+function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const earthRadiusKm = 6371; // Radius of the Earth in kilometers
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    lat1 = toRadians(lat1);
+    lat2 = toRadians(lat2);
+
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return earthRadiusKm * c;
+}
+
+function toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+}
+
+
 /**
  * @name createOrder
  * @description Create order and store it in order storage
@@ -281,27 +322,30 @@ export function getOrder(id: string): Result<Order, string> {
  */
 $update;
 export function createOrder(payload: OrderPayload): Result<Order, string> {
+    if (!payload || !payload.description || !payload.weight || !payload.sender || !payload.receiver || !payload.status) {
+        return Result.Err<Order, string>('Invalid payload: description, weight, sender, receiver, and status are required');
+    }
+
     const senderId = payload.sender;
     const receiverId = payload.receiver;
 
     // Get sender and receiver locations
-    let senderLocation = match(userLocationStorage.get(senderId), {
-        Some: (location) => location.location,
-        None: () => Result.Err<Order, string>(`Sender location of id:${senderId} not found`),
-    });
+    const senderLocationResult = userLocationStorage.get(senderId);
+    const receiverLocationResult = userLocationStorage.get(receiverId);
 
-    let receiverLocation = match(userLocationStorage.get(receiverId), {
-        Some: (location) => location.location,
-        None: () => Result.Err<Order, string>(`Receiver location of id:${receiverId} not found`),
-    });
+    if (senderLocationResult.isNone() || receiverLocationResult.isNone()) {
+        return Result.Err<Order, string>('Sender or receiver location not found');
+    }
 
-    senderLocation = (senderLocation as { lat: number, lng: number });
-    receiverLocation = (receiverLocation as { lat: number, lng: number });
+    const senderLocation = senderLocationResult.unwrap().location;
+    const receiverLocation = receiverLocationResult.unwrap().location;
 
-    // Calculate distance between sender and receiver
-    const distance = Math.sqrt(
-        Math.pow(senderLocation.lat - receiverLocation.lat, 2) +
-        Math.pow(senderLocation.lng - receiverLocation.lng, 2)
+    // Calculate distance between sender and receiver using Haversine formula
+    const distance = calculateHaversineDistance(
+        senderLocation.lat,
+        senderLocation.lng,
+        receiverLocation.lat,
+        receiverLocation.lng
     );
 
     // Calculate initial amount based on distance
@@ -330,6 +374,7 @@ export function createOrder(payload: OrderPayload): Result<Order, string> {
     orderStorage.insert(order.id, order);
     return Result.Ok(order);
 }
+
 
 
 /**
