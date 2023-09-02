@@ -7,7 +7,7 @@ This is a simple logistics application built on the DFINITY Internet Computer pl
 Before you begin, ensure you have met the following requirements:
 
 - [Node.js](https://nodejs.org/) installed.
-- [DFINITY Canister SDK](https://sdk.dfinity.org/docs/quickstart/local-quickstart.html) installed.
+- [DFINITY Canister SDK](https://sdk.dfinity.org/docs) installed.
 
 ## Setup
 
