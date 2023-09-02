@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 type User = Record<{
     id: string,
     username: string,
-    type: "user" | "merchant" | "driver",
+    type: string,
     created_at: nat64,
     updated_at: Opt<nat64>,
     driver: Opt<boolean>,
@@ -13,7 +13,7 @@ type User = Record<{
 
 type UserPayload = Record<{
     username: string,
-    type: "user" | "merchant" | "driver",
+    type: string,
 }>;
 
 type UserLocation = Record<{
@@ -60,7 +60,7 @@ type OrderPayload = Record<{
     weight: number,
     sender: string,
     receiver: string,
-    status: "pickup" | "in_transit" | "delivered",
+    status: string,
 }>;
 
 type Payment = Record<{
@@ -75,7 +75,7 @@ type Payment = Record<{
 type PaymentPayload = Record<{
     order_id: string,
     amount: number,
-    status: "pending" | "paid" | "failed",
+    status: string,
 }>;
 
 type Shipment = Record<{
