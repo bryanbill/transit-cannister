@@ -1,14 +1,12 @@
 import { $query, $update, Record, StableBTreeMap, Vec, match, Result, nat64, ic, Opt } from 'azle';
 import { v4 as uuidv4 } from 'uuid';
 
-
 type User = Record<{
     id: string,
     username: string,
     type: string,
     created_at: nat64,
-    updated_at: Opt<nat64>,
-    driver: Opt<boolean>,
+    updated_at: Opt<nat64>
 }>;
 
 type UserPayload = Record<{
@@ -96,11 +94,11 @@ type ShipmentPayload = Record<{
 
 
 // Initialize storage for each entity
-const userStorage = new StableBTreeMap<string, User>(0, 88, 2048);
-const userLocationStorage = new StableBTreeMap<string, UserLocation>(0, 88, 2048);
-const orderStorage = new StableBTreeMap<string, Order>(0, 88, 2048);
-const paymentStorage = new StableBTreeMap<string, Payment>(0, 88, 2048);
-const shipmentStorage = new StableBTreeMap<string, Shipment>(0, 88, 2048);
+const userStorage = new StableBTreeMap<string, User>(0, 44, 1024);
+const userLocationStorage = new StableBTreeMap<string, UserLocation>(1, 88, 2048);
+const orderStorage = new StableBTreeMap<string, Order>(2, 88, 2048);
+const paymentStorage = new StableBTreeMap<string, Payment>(3, 88, 2048);
+const shipmentStorage = new StableBTreeMap<string, Shipment>(4, 88, 2048);
 
 // User
 
@@ -140,11 +138,9 @@ $update;
 export function createUser(payload: UserPayload): Result<User, string> {
     const user: User = {
         id: uuidv4(),
-        username: payload.username,
-        type: payload.type,
         created_at: ic.time(),
         updated_at: Opt.None,
-        driver: Opt.None,
+        ...payload,
     };
     userStorage.insert(user.id, user);
     return Result.Ok(user);
@@ -164,8 +160,7 @@ export function updateUser(id: string, payload: UserPayload): Result<User, strin
         Some: (user) => {
             const updatedUser = {
                 ...user,
-                username: payload.username,
-                type: payload.type,
+                ...payload,
                 updated_at: Opt.Some(ic.time()),
             };
             userStorage.insert(id, updatedUser);
@@ -284,7 +279,6 @@ export function getOrder(id: string): Result<Order, string> {
  * @param {OrderPayload} payload
  * @returns {Result<Order, string>}
  */
-$update;
 $update;
 export function createOrder(payload: OrderPayload): Result<Order, string> {
     const senderId = payload.sender;
