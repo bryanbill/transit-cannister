@@ -1,0 +1,13 @@
+{
+  "canisters": {
+    "transit": {
+      "main": "src/index.ts",
+      "type": "custom",
+      "build": "npx azle transit",
+      "root": "src",
+      "ts": "src/index.ts",
+      "candid": "src/index.did",
+      "wasm": ".azle/transit/transit.wasm.gz"
+    }
+  }
+}
