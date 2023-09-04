@@ -90,16 +90,22 @@ type PaymentPayload = Record<{
 type Shipment = Record<{
   id: string;
   order_id: string;
-  driver_id: string; // Add a field for driver ID
-  last_location: string;
+  driver_id: string;
+  last_location: Record<{
+    lat: number;
+    lng: number;
+  }>;
   created_at: nat64;
   updated_at: Opt<nat64>;
 }>;
 
 type ShipmentPayload = Record<{
   order_id: string;
-  driver_id: string; // Include driver ID
-  last_location: string;
+  driver_id: string;
+  last_location: Record<{
+    lat: number;
+    lng: number;
+  }>;
 }>;
 
 // Initialize storage for each entity
@@ -152,9 +158,9 @@ export function getUser(id: string): Result<User, string> {
  */
 $update;
 export function createUser(payload: UserPayload): Result<User, string> {
-//   if (!payload.username || !payload.type) {
-//     return Result.Err("Invalid payload: missing username or type");
-//   }
+  //   if (!payload.username || !payload.type) {
+  //     return Result.Err("Invalid payload: missing username or type");
+  //   }
 
   const existingUser = userStorage
     .values()
@@ -261,7 +267,7 @@ export function createUserLocation(
     return Result.Err("Invalid payload");
   }
 
-  
+
   try {
     const userLocation: UserLocation = {
       id: uuidv4(),
@@ -385,7 +391,7 @@ export function createOrder(payload: OrderPayload): Result<Order, string> {
   // Calculate distance between sender and receiver
   const distance = Math.sqrt(
     Math.pow(senderLocation.lat - receiverLocation.lat, 2) +
-      Math.pow(senderLocation.lng - receiverLocation.lng, 2)
+    Math.pow(senderLocation.lng - receiverLocation.lng, 2)
   );
 
   // Calculate initial amount based on distance
