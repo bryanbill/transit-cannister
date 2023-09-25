@@ -143,11 +143,15 @@ export function getUsers(): Result<Vec<User>, string> {
  */
 $query;
 export function getUser(id: string): Result<User, string> {
-  if (!id) return Result.Err<User, string>(`Invalid id`);
-  return match(userStorage.get(id), {
-    Some: (user) => Result.Ok<User, string>(user),
-    None: () => Result.Err<User, string>(`User of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<User, string>(`Invalid id`);
+    return match(userStorage.get(id), {
+      Some: (user) => Result.Ok<User, string>(user),
+      None: () => Result.Err<User, string>(`User of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`An error occurred: ${error}`);
+  }
 }
 
 /**
@@ -158,25 +162,20 @@ export function getUser(id: string): Result<User, string> {
  */
 $update;
 export function createUser(payload: UserPayload): Result<User, string> {
-  //   if (!payload.username || !payload.type) {
-  //     return Result.Err("Invalid payload: missing username or type");
-  //   }
-
-  const existingUser = userStorage
-    .values()
-    .find((user) => user.username === payload.username);
-  if (existingUser) {
-    return Result.Err("User with the same username already exists");
-  }
-
-  const user: User = {
-    id: uuidv4(),
-    created_at: ic.time(),
-    updated_at: Opt.None,
-    ...payload,
-  };
-
   try {
+    const existingUser = userStorage
+      .values()
+      .find((user) => user.username === payload.username);
+    if (existingUser) {
+      return Result.Err("User with the same username already exists");
+    }
+
+    const user: User = {
+      id: uuidv4(),
+      created_at: ic.time(),
+      updated_at: Opt.None,
+      ...payload,
+    };
     userStorage.insert(user.id, user);
     return Result.Ok(user);
   } catch (error) {
@@ -196,26 +195,26 @@ export function updateUser(
   id: string,
   payload: UserPayload
 ): Result<User, string> {
-  if (!id) return Result.Err<User, string>(`Invalid id`);
-  if (!payload.username || !payload.type)
-    return Result.Err<User, string>(`Invalid payload`);
-  return match(userStorage.get(id), {
-    Some: (user) => {
-      const updatedUser = {
-        ...user,
-        username: payload.username,
-        type: payload.type,
-        updated_at: Opt.Some(ic.time()),
-      };
-      try {
+  try {
+    if (!id) return Result.Err<User, string>(`Invalid id`);
+    if (!payload.username || !payload.type)
+      return Result.Err<User, string>(`Invalid payload`);
+    return match(userStorage.get(id), {
+      Some: (user) => {
+        const updatedUser = {
+          ...user,
+          username: payload.username,
+          type: payload.type,
+          updated_at: Opt.Some(ic.time()),
+        };
         userStorage.insert(id, updatedUser);
         return Result.Ok<User, string>(updatedUser);
-      } catch (error) {
-        return Result.Err<User, string>(`Error inserting user: ${error}`);
-      }
-    },
-    None: () => Result.Err<User, string>(`User of id:${id} not found`),
-  });
+      },
+      None: () => Result.Err<User, string>(`User of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Error updating user: ${error}`);
+  }
 }
 
 /**
@@ -226,11 +225,15 @@ export function updateUser(
  */
 $update;
 export function deleteUser(id: string): Result<User, string> {
-  if (!id) return Result.Err<User, string>(`Invalid id`);
-  return match(userStorage.remove(id), {
-    Some: (user) => Result.Ok<User, string>(user),
-    None: () => Result.Err<User, string>(`User of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<User, string>(`Invalid id`);
+    return match(userStorage.remove(id), {
+      Some: (user) => Result.Ok<User, string>(user),
+      None: () => Result.Err<User, string>(`User of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Error deleting user: ${error}`);
+  }
 }
 
 // User Location
@@ -243,14 +246,18 @@ export function deleteUser(id: string): Result<User, string> {
  */
 $query;
 export function getUserLocation(userid: string): Result<UserLocation, string> {
-  if (!userid) return Result.Err<UserLocation, string>(`Invalid user id`);
-  return match(userLocationStorage.get(userid), {
-    Some: (userLocation) => Result.Ok<UserLocation, string>(userLocation),
-    None: () =>
-      Result.Err<UserLocation, string>(
-        `User location of id:${userid} not found`
-      ),
-  });
+  try {
+    if (!userid) return Result.Err<UserLocation, string>(`Invalid user id`);
+    return match(userLocationStorage.get(userid), {
+      Some: (userLocation) => Result.Ok<UserLocation, string>(userLocation),
+      None: () =>
+        Result.Err<UserLocation, string>(
+          `User location of id:${userid} not found`
+        ),
+    });
+  } catch (error) {
+    return Result.Err(`Error retrieving user location: ${error}`);
+  }
 }
 
 /**
@@ -263,12 +270,10 @@ $update;
 export function createUserLocation(
   payload: UserLocationPayload
 ): Result<UserLocation, string> {
-  if (!payload.user_id || !payload.location) {
-    return Result.Err("Invalid payload");
-  }
-
-
   try {
+    if (!payload.user_id || !payload.location) {
+      return Result.Err("Invalid payload");
+    }
     const userLocation: UserLocation = {
       id: uuidv4(),
       user_id: payload.user_id,
@@ -296,36 +301,34 @@ export function updateUserLocation(
   userid: string,
   payload: UserLocationPayload
 ): Result<UserLocation, string> {
-  if (!userid) return Result.Err<UserLocation, string>(`Invalid user id`);
-  if (
-    !payload ||
-    !payload.location ||
-    typeof payload.location.lat !== "number" ||
-    typeof payload.location.lng !== "number"
-  ) {
-    return Result.Err<UserLocation, string>(`Invalid payload`);
-  }
-  return match(userLocationStorage.get(userid), {
-    Some: (userLocation) => {
-      const updatedUserLocation = {
-        ...userLocation,
-        location: payload.location,
-        updated_at: Opt.Some(ic.time()),
-      };
-      try {
+  try {
+    if (!userid) return Result.Err<UserLocation, string>(`Invalid user id`);
+    if (
+      !payload ||
+      !payload.location ||
+      typeof payload.location.lat !== "number" ||
+      typeof payload.location.lng !== "number"
+    ) {
+      return Result.Err<UserLocation, string>(`Invalid payload`);
+    }
+    return match(userLocationStorage.get(userid), {
+      Some: (userLocation) => {
+        const updatedUserLocation = {
+          ...userLocation,
+          location: payload.location,
+          updated_at: Opt.Some(ic.time()),
+        };
         userLocationStorage.insert(userid, updatedUserLocation);
         return Result.Ok<UserLocation, string>(updatedUserLocation);
-      } catch (error) {
-        return Result.Err<UserLocation, string>(
-          `Failed to update user location: ${error}`
-        );
-      }
-    },
-    None: () =>
-      Result.Err<UserLocation, string>(
-        `User location of id:${userid} not found`
-      ),
-  });
+      },
+      None: () =>
+        Result.Err<UserLocation, string>(
+          `User location of id:${userid} not found`
+        ),
+    });
+  } catch (error) {
+    return Result.Err(`Error updating user location: ${error}`);
+  }
 }
 
 // Order
@@ -352,11 +355,15 @@ export function getOrders(): Result<Vec<Order>, string> {
  */
 $query;
 export function getOrder(id: string): Result<Order, string> {
-  if (!id) return Result.Err<Order, string>(`Invalid id`);
-  return match(orderStorage.get(id), {
-    Some: (order) => Result.Ok<Order, string>(order),
-    None: () => Result.Err<Order, string>(`Order of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<Order, string>(`Invalid id`);
+    return match(orderStorage.get(id), {
+      Some: (order) => Result.Ok<Order, string>(order),
+      None: () => Result.Err<Order, string>(`Order of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Error retrieving order: ${error}`);
+  }
 }
 
 /**
@@ -367,58 +374,67 @@ export function getOrder(id: string): Result<Order, string> {
  */
 $update;
 export function createOrder(payload: OrderPayload): Result<Order, string> {
-  const senderId = payload.sender;
-  const receiverId = payload.receiver;
+  try {
+    const senderId = payload.sender;
+    const receiverId = payload.receiver;
 
-  // Get sender and receiver locations
-  let senderLocation = match(userLocationStorage.get(senderId), {
-    Some: (location) => location.location,
-    None: () =>
-      Result.Err<Order, string>(`Sender location of id:${senderId} not found`),
-  });
+    // check if sender and receiver exist
+    const user = userStorage.get(senderId);
+    if (user.None || !(user.Some?.id)) {
+      return Result.Err<Order, string>(`Sender of id:${senderId} not found`);
+    }
 
-  let receiverLocation = match(userLocationStorage.get(receiverId), {
-    Some: (location) => location.location,
-    None: () =>
-      Result.Err<Order, string>(
-        `Receiver location of id:${receiverId} not found`
-      ),
-  });
+    const receiver = userStorage.get(receiverId);
+    if (receiver.None || !(receiver.Some?.id)) {
+      return Result.Err<Order, string>(`Receiver of id:${receiverId} not found`);
+    }
 
-  senderLocation = senderLocation as { lat: number; lng: number };
-  receiverLocation = receiverLocation as { lat: number; lng: number };
+    // Get sender and receiver locations
+    let senderLocation = userLocationStorage.get(senderId);
+    if (senderLocation.None || !(senderLocation.Some?.id)) {
+      return Result.Err<Order, string>(`Sender location of id:${senderId} not found`);
+    }
 
-  // Calculate distance between sender and receiver
-  const distance = Math.sqrt(
-    Math.pow(senderLocation.lat - receiverLocation.lat, 2) +
-    Math.pow(senderLocation.lng - receiverLocation.lng, 2)
-  );
+    let receiverLocation = userLocationStorage.get(receiverId);
+    if (receiverLocation.None || !(receiverLocation.Some?.id)) {
+      return Result.Err<Order, string>(`Receiver location of id:${receiverId} not found`);
+    }
 
-  // Calculate initial amount based on distance
-  let initialAmount = 0;
-  if (distance < 10) {
-    initialAmount = distance * 30 * payload.weight;
-  } else if (distance < 50) {
-    initialAmount = distance * 25 * payload.weight;
-  } else {
-    initialAmount = distance * 20 * payload.weight;
+
+    // Calculate distance between sender and receiver
+    const distance = Math.sqrt(
+      Math.pow(senderLocation.Some?.location.lat - receiverLocation.Some?.location.lat, 2) +
+      Math.pow(senderLocation.Some?.location.lng - receiverLocation.Some?.location.lng, 2)
+    );
+
+    // Calculate initial amount based on distance
+    let initialAmount = 0;
+    if (distance < 10) {
+      initialAmount = distance * 30 * payload.weight;
+    } else if (distance < 50) {
+      initialAmount = distance * 25 * payload.weight;
+    } else {
+      initialAmount = distance * 20 * payload.weight;
+    }
+
+    const order: Order = {
+      id: uuidv4(),
+      description: payload.description,
+      weight: payload.weight,
+      sender: payload.sender,
+      receiver: payload.receiver,
+      sender_location: senderLocation.Some?.location,
+      receiver_location: receiverLocation.Some?.location,
+      status: payload.status,
+      initial_amount: initialAmount,
+      created_at: ic.time(),
+      updated_at: Opt.None,
+    };
+    orderStorage.insert(order.id, order);
+    return Result.Ok(order);
+  } catch (error) {
+    return Result.Err<Order, string>(`Error creating order: ${error}`);
   }
-
-  const order: Order = {
-    id: uuidv4(),
-    description: payload.description,
-    weight: payload.weight,
-    sender: payload.sender,
-    receiver: payload.receiver,
-    sender_location: senderLocation,
-    receiver_location: receiverLocation,
-    status: payload.status,
-    initial_amount: initialAmount,
-    created_at: ic.time(),
-    updated_at: Opt.None,
-  };
-  orderStorage.insert(order.id, order);
-  return Result.Ok(order);
 }
 
 /**
@@ -433,33 +449,37 @@ export function updateOrder(
   id: string,
   payload: OrderPayload
 ): Result<Order, string> {
-  if (!id) return Result.Err<Order, string>(`Invalid id`);
+  try {
+    if (!id) return Result.Err<Order, string>(`Invalid id`);
 
-  if (
-    !payload.description ||
-    !payload.weight ||
-    !payload.sender ||
-    !payload.receiver ||
-    !payload.status
-  ) {
-    return Result.Err<Order, string>("Invalid payload");
+    if (
+      !payload.description ||
+      !payload.weight ||
+      !payload.sender ||
+      !payload.receiver ||
+      !payload.status
+    ) {
+      return Result.Err<Order, string>("Invalid payload");
+    }
+    return match(orderStorage.get(id), {
+      Some: (order) => {
+        const updatedOrder = {
+          ...order,
+          description: payload.description,
+          weight: payload.weight,
+          sender: payload.sender,
+          receiver: payload.receiver,
+          status: payload.status,
+          updated_at: Opt.Some(ic.time()),
+        };
+        orderStorage.insert(id, updatedOrder);
+        return Result.Ok<Order, string>(updatedOrder);
+      },
+      None: () => Result.Err<Order, string>(`Order of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Error updating order: ${error}`);
   }
-  return match(orderStorage.get(id), {
-    Some: (order) => {
-      const updatedOrder = {
-        ...order,
-        description: payload.description,
-        weight: payload.weight,
-        sender: payload.sender,
-        receiver: payload.receiver,
-        status: payload.status,
-        updated_at: Opt.Some(ic.time()),
-      };
-      orderStorage.insert(id, updatedOrder);
-      return Result.Ok<Order, string>(updatedOrder);
-    },
-    None: () => Result.Err<Order, string>(`Order of id:${id} not found`),
-  });
 }
 
 /**
@@ -470,11 +490,15 @@ export function updateOrder(
  */
 $update;
 export function deleteOrder(id: string): Result<Order, string> {
-  if (!id) return Result.Err<Order, string>(`Invalid id`);
-  return match(orderStorage.remove(id), {
-    Some: (order) => Result.Ok<Order, string>(order),
-    None: () => Result.Err<Order, string>(`Order of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<Order, string>(`Invalid id`);
+    return match(orderStorage.remove(id), {
+      Some: (order) => Result.Ok<Order, string>(order),
+      None: () => Result.Err<Order, string>(`Order of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Error deleting order: ${error}`);
+  }
 }
 
 // Payment
@@ -501,11 +525,15 @@ export function getPayments(): Result<Vec<Payment>, string> {
  */
 $query;
 export function getPayment(id: string): Result<Payment, string> {
-  if (!id) return Result.Err<Payment, string>(`Invalid id`);
-  return match(paymentStorage.get(id), {
-    Some: (payment) => Result.Ok<Payment, string>(payment),
-    None: () => Result.Err<Payment, string>(`Payment of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<Payment, string>(`Invalid id`);
+    return match(paymentStorage.get(id), {
+      Some: (payment) => Result.Ok<Payment, string>(payment),
+      None: () => Result.Err<Payment, string>(`Payment of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Failed to get payment: ${error}`);
+  }
 }
 
 /**
@@ -518,39 +546,43 @@ $update;
 export function createPayment(
   payload: PaymentPayload
 ): Result<Payment, string> {
-  // Validate payload
-  if (!payload.order_id || typeof payload.order_id !== "string") {
-    return Result.Err<Payment, string>("Invalid order_id");
-  }
-  if (
-    !payload.amount ||
-    typeof payload.amount !== "number" ||
-    payload.amount <= 0
-  ) {
-    return Result.Err<Payment, string>("Invalid amount");
-  }
-  if (!payload.status || typeof payload.status !== "string") {
-    return Result.Err<Payment, string>("Invalid status");
-  }
+  try {
+    // Validate payload
+    if (!payload.order_id || typeof payload.order_id !== "string") {
+      return Result.Err<Payment, string>("Invalid order_id");
+    }
+    if (
+      !payload.amount ||
+      typeof payload.amount !== "number" ||
+      payload.amount <= 0
+    ) {
+      return Result.Err<Payment, string>("Invalid amount");
+    }
+    if (!payload.status || typeof payload.status !== "string") {
+      return Result.Err<Payment, string>("Invalid status");
+    }
 
-  const payment: Payment = {
-    id: uuidv4(),
-    order_id: payload.order_id,
-    amount: payload.amount,
-    status: payload.status,
-    created_at: ic.time(),
-    updated_at: Opt.None,
-  };
-  paymentStorage.insert(payment.id, payment);
+    const payment: Payment = {
+      id: uuidv4(),
+      order_id: payload.order_id,
+      amount: payload.amount,
+      status: payload.status,
+      created_at: ic.time(),
+      updated_at: Opt.None,
+    };
+    paymentStorage.insert(payment.id, payment);
 
-  // Update order status
-  const order = match(orderStorage.get(payload.order_id), {
-    Some: (order) => order,
-    None: () =>
-      Result.Err<Order, string>(`Order of id:${payload.order_id} not found`),
-  });
+    // Update order status
+    const order = match(orderStorage.get(payload.order_id), {
+      Some: (order) => order,
+      None: () =>
+        Result.Err<Order, string>(`Order of id:${payload.order_id} not found`),
+    });
 
-  return Result.Ok(payment);
+    return Result.Ok(payment);
+  } catch (error) {
+    return Result.Err(`Failed to create payment: ${error}`);
+  }
 }
 
 // Shipment
@@ -578,11 +610,15 @@ export function getShipments(): Result<Vec<Shipment>, string> {
  */
 $query;
 export function getShipment(id: string): Result<Shipment, string> {
-  if (!id) return Result.Err<Shipment, string>(`Invalid id`);
-  return match(shipmentStorage.get(id), {
-    Some: (shipment) => Result.Ok<Shipment, string>(shipment),
-    None: () => Result.Err<Shipment, string>(`Shipment of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<Shipment, string>(`Invalid id`);
+    return match(shipmentStorage.get(id), {
+      Some: (shipment) => Result.Ok<Shipment, string>(shipment),
+      None: () => Result.Err<Shipment, string>(`Shipment of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Failed to get shipment: ${error}`);
+  }
 }
 
 /**
@@ -595,34 +631,38 @@ $update;
 export function createShipment(
   payload: ShipmentPayload
 ): Result<Shipment, string> {
-  if (!payload.order_id || !payload.driver_id || !payload.last_location) {
-    return Result.Err<Shipment, string>("Invalid payload");
+  try {
+    if (!payload.order_id || !payload.driver_id || !payload.last_location) {
+      return Result.Err<Shipment, string>("Invalid payload");
+    }
+
+    const order = orderStorage.get(payload.order_id);
+
+    if (order.None || !(order.Some?.id)) {
+      return Result.Err<Shipment, string>(`Order of id:${payload.order_id} not found`);
+    }
+
+    const shipment: Shipment = {
+      id: uuidv4(),
+      driver_id: payload.driver_id,
+      order_id: payload.order_id,
+      last_location: payload.last_location,
+      created_at: ic.time(),
+      updated_at: Opt.None,
+    };
+    shipmentStorage.insert(shipment.id, shipment);
+
+    const updatedOrder = {
+      ...(order.Some as Order),
+      status: "in_transit",
+      updated_at: Opt.Some(ic.time()),
+    };
+    orderStorage.insert(payload.order_id, updatedOrder);
+
+    return Result.Ok(shipment);
+  } catch (error) {
+    return Result.Err(`Failed to create shipment: ${error}`);
   }
-  // Get Order
-  const order = match(orderStorage.get(payload.order_id), {
-    Some: (order) => order,
-    None: () =>
-      Result.Err<Order, string>(`Order of id:${payload.order_id} not found`),
-  });
-
-  const shipment: Shipment = {
-    id: uuidv4(),
-    driver_id: payload.driver_id,
-    order_id: payload.order_id,
-    last_location: payload.last_location,
-    created_at: ic.time(),
-    updated_at: Opt.None,
-  };
-  shipmentStorage.insert(shipment.id, shipment);
-
-  const updatedOrder = {
-    ...(order as Order),
-    status: "in_transit",
-    updated_at: Opt.Some(ic.time()),
-  };
-  orderStorage.insert(payload.order_id, updatedOrder);
-
-  return Result.Ok(shipment);
 }
 
 /**
@@ -637,19 +677,23 @@ export function updateShipment(
   id: string,
   payload: ShipmentPayload
 ): Result<Shipment, string> {
-  if (!id) return Result.Err<Shipment, string>(`Invalid id`);
-  return match(shipmentStorage.get(id), {
-    Some: (shipment) => {
-      const updatedShipment = {
-        ...shipment,
-        last_location: payload.last_location,
-        updated_at: Opt.Some(ic.time()),
-      };
-      shipmentStorage.insert(id, updatedShipment);
-      return Result.Ok<Shipment, string>(updatedShipment);
-    },
-    None: () => Result.Err<Shipment, string>(`Shipment of id:${id} not found`),
-  });
+  try {
+    if (!id) return Result.Err<Shipment, string>(`Invalid id`);
+    return match(shipmentStorage.get(id), {
+      Some: (shipment) => {
+        const updatedShipment = {
+          ...shipment,
+          last_location: payload.last_location,
+          updated_at: Opt.Some(ic.time()),
+        };
+        shipmentStorage.insert(id, updatedShipment);
+        return Result.Ok<Shipment, string>(updatedShipment);
+      },
+      None: () => Result.Err<Shipment, string>(`Shipment of id:${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err(`Failed to update shipment: ${error}`);
+  }
 }
 
 globalThis.crypto = {
