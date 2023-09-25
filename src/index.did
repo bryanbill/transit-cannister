@@ -35,12 +35,12 @@ type Shipment = record {
   id : text;
   updated_at : opt nat64;
   created_at : nat64;
-  last_location : text;
+  last_location : _InlineOrderSenderLocation;
   driver_id : text;
   order_id : text;
 };
 type ShipmentPayload = record {
-  last_location : text;
+  last_location : _InlineOrderSenderLocation;
   driver_id : text;
   order_id : text;
 };

@@ -4,7 +4,7 @@
   "description": "A DFINITY canister project for a simple logistics application ",
   "main": "index.js",
   "scripts": {
-    "start": "dfx start --background --clean",
+    "start": "dfx start --background --clean && npm run deploy",
     "deploy": "dfx deploy",
     "stop": "dfx stop",
     "test": "echo \"Error: no test specified\" && exit 1"
